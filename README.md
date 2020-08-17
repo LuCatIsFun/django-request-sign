@@ -2,7 +2,29 @@
 
 对django请求,根据参数进行签名
 
-### 需要在header头中增加的参数
+### 安装
+
+`pip install django-request-sign`
+
+### 使用
+
+将 `request_sign.middleware.RequestSignMiddleware` 放置到中间件第一位
+
+``` python
+# django settings
+MIDDLEWARE = [
+    'request_sign.middleware.RequestSignMiddleware',
+    ...
+    ...
+]
+```
+
+### 前端支持与示例
+
+需要在header头中增加的参数，这里以[axios](./example/axios/index.js)作为参考,前端签名参考[示例js文件](./example/sign/index.js)
+
+实际使用前请不要忘了删除示例文件中输出的日志信息
+
 
 | 参数  | 说明  |
 | ------------ | ------------ |
@@ -19,6 +41,19 @@
 |  SIGNATURE_SECRET | 签名秘钥  | Str|`None`|`e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI`|
 |  SIGNATURE_ALLOW_TIME_ERROR|允许请求时间前后误差|Int|`600`|`600`|
 |  SIGNATURE_RESPONSE|签名不通过返回方法|Str|`request_sign.utils.default_response`|`you_project.you_app.file.function`|
+
+`request_sign.utils.default_response` 方法默认返回http状态码为200的空信息，你可以自行实现一个返回函数，更改 `SIGNATURE_RESPONSE`配置
+即可，但请一定注意，自行实现的函数一定要返回一个django的`HttpResponse`对象，否则django会异常。
+
+```python
+# request_sign.utils.default_response
+def default_response():
+    """
+        Must return django HttpResponse type
+    :return: HttpResponse
+    """
+    return HttpResponse()
+```
 
 
 ### 签名参数sign生成的方法
