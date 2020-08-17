@@ -33,6 +33,11 @@ def check_signature(request):
     if not all([timestamp, nonce, sign]):
         return False
 
+    try:
+        timestamp = float(timestamp)
+    except:
+        raise ValueError('timestamp must be int or float')
+
     now_timestamp = datetime.now().timestamp()
     if (now_timestamp-SIGNATURE_ALLOW_TIME_ERROR) > timestamp or timestamp > (now_timestamp+SIGNATURE_ALLOW_TIME_ERROR):
         return False
