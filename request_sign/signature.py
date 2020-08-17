@@ -6,14 +6,15 @@
 
 import hashlib
 from datetime import datetime
+from urllib.parse import unquote
 
 from request_sign.utils import try_safe_eval
-from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR
+from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, SIGNATURE_PASS_LIST
 
 
 def signature_request(parameters):
     # 列表生成式，生成key=value格式
-    parameters_list = ["".join(i) for i in parameters.items() if i[1] and i[0] != "sign"]
+    parameters_list = ["".join(map(str, i)) for i in parameters.items() if i[1] and i[0] != "sign"]
     # 参数名ASCII码从小到大排序
     sort_parameters = "".join(sorted(parameters_list))
     # 在strA后面拼接上SIGNATURE_SECRET得到signature_str字符串
@@ -21,11 +22,14 @@ def signature_request(parameters):
     # MD5加密
     m = hashlib.md5()
     m.update(signature_str.lower().encode('UTF-8'))
-
     return m.hexdigest()
 
 
 def check_signature(request):
+    # pass list
+    if request.path in SIGNATURE_PASS_LIST:
+        return True
+
     timestamp = request.META.get("HTTP_TIMESTAMP")
     nonce = request.META.get("HTTP_NONCE")
     sign = request.META.get("HTTP_SIGN")
@@ -52,10 +56,21 @@ def check_signature(request):
         if parameter:
             parameter = try_safe_eval(parameter)
             if isinstance(parameter, dict):
-                parameters = dict(parameters, **parameter)
+                # 遍历字典，对value进行url解码
+                parameters = dict(parameters,
+                                  **dict(zip(
+                                      parameter.keys(),
+                                      map(lambda x: unquote(str(x)).replace('+', ' '), parameter.values()))
+                                  ))
+                # 删除字典中空参数
+                for p in list(parameters.keys()):
+                    p_value = try_safe_eval(parameters[p])
+                    if not p_value or len(p_value) == 0:
+                        del parameters[p]
             else:
                 if len(str(parameter).split('=')) == 2:
                     key, value = str(parameter).split('=')
                     if key not in parameters:
-                        parameters[key] = value
+                        # 解码并去除空格
+                        parameters[key] = unquote(value).replace('+', ' ')
     return sign == signature_request(parameters)

@@ -8,6 +8,10 @@ import time
 import datetime
 
 from django.http import HttpResponse
+try:
+    from django.shortcuts import reverse
+except ImportError:
+    from django.core.urlresolvers import reverse
 
 
 def try_safe_eval(value):
@@ -22,10 +26,29 @@ def try_safe_eval(value):
                 'true': True,
                 'false': False,
             }.get(value.lower())
-    else:
-        raise ValueError('value can not be null')
 
     return value
+
+
+def handle_pass_list(url_or_url_name_list):
+    """
+        reverse django url name
+    :param url_or_url_name_list:
+    :return:
+    """
+    assert isinstance(url_or_url_name_list, list), 'parameter type must be list'
+
+    response = []
+    for u in url_or_url_name_list:
+        try:
+            u = reverse(u)
+            if u not in response:
+                response.append(u)
+        except:
+            if u not in response:
+                response.append(u)
+
+    return response
 
 
 def default_response():

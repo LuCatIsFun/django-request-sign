@@ -1,4 +1,4 @@
-import md5 from './md5.min'
+import md5 from 'md5.min.js'
 
 function randomString(length) {
     let str = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -34,16 +34,27 @@ function signature(config) {
     for (let key in config.params) {
       let item = config.params[key];
       if(!parameters.hasOwnProperty(key)){
-        parameters[key] = item
+        if(item!==undefined&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
+          if(typeof item==="object"){
+            parameters[key] = JSON.stringify(item)
+          }else{
+            parameters[key] = String(item)
+          }
+        }
       }
     }
   }
-
   if(config.hasOwnProperty('data')){
     for (let key in config.data) {
       let item = config.data[key];
     　if(!parameters.hasOwnProperty(key)){
-        parameters[key] = item
+        if(item!==undefined&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
+          if(typeof item==="object"){
+            parameters[key] = JSON.stringify(item)
+          }else{
+            parameters[key] = String(item)
+          }
+        }
       }
     }
   }
@@ -55,13 +66,13 @@ function signature(config) {
     }
   }
   let sort_parameters = parameters_list.sort();
-  console.log(JSON.stringify(parameters_list));
-  console.log(JSON.stringify(sort_parameters));
+  console.log("parameters_list:"+JSON.stringify(parameters_list));
+  console.log("sort_parameters:"+JSON.stringify(sort_parameters));
 
   let sort_parameters_secret = (sort_parameters.join("")+SECRET).toLowerCase();
 
-  console.log(sort_parameters_secret)
-  console.log(md5(sort_parameters_secret))
+  console.log("sort_parameters_secret:"+sort_parameters_secret)
+  console.log("sign:"+md5(sort_parameters_secret))
   config.headers.sign = md5(sort_parameters_secret);
   return config;
 }

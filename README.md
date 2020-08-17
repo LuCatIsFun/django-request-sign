@@ -41,6 +41,7 @@ MIDDLEWARE = [
   SIGNATURE_SECRET | 签名秘钥  | Str|`None`|`e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI`
   SIGNATURE_ALLOW_TIME_ERROR|允许请求时间前后误差|Int|`600`|`600`
   SIGNATURE_RESPONSE|签名不通过返回方法|Str|`request_sign.utils.default_response`|`you_project.you_app.file.function`
+  SIGNATURE_PASS_LIST| List|[]|1. 在urls.py中配置name属性 `re_path('content/download', views.DownloadContent.as_view(), name='DownloadContent')`，配置中填写name值即可(推荐)，`['DownloadContent']` 2.直接写url(不推荐)`['/api/v1/mcn/content/download']`
 
 `request_sign.utils.default_response` 方法默认返回http状态码为200的空信息，你可以自行实现一个返回函数，更改 `SIGNATURE_RESPONSE`配置
 即可，但请一定注意，自行实现的函数一定要返回一个django的`HttpResponse`对象，否则django会异常。
