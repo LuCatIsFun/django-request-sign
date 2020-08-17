@@ -9,7 +9,7 @@ function randomString(length) {
 }
 
 function signature(config) {
-  const SECRET = 'wrXxDI3FlGO8vqp5Gb3FlWu25idm';
+  const SECRET = 'e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI';
   // config 数据示例
   // {
   //     "url": "/user/login",
