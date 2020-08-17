@@ -17,4 +17,4 @@ class RequestSignMiddleware(MiddlewareMixin):
     def process_request(request):
         if ENABLE_REQUEST_SIGNATURE:
             if not check_signature(request):
-                return import_string(SIGNATURE_RESPONSE)
+                return import_string(SIGNATURE_RESPONSE)()
