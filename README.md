@@ -41,9 +41,9 @@ MIDDLEWARE = [
   SIGNATURE_SECRET | 签名秘钥  | Str|`None`|`e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI`
   SIGNATURE_ALLOW_TIME_ERROR|允许请求时间前后误差|Int|`600`|`600`
   SIGNATURE_RESPONSE|签名不通过返回方法|Str|`request_sign.utils.default_response`|`you_project.you_app.file.function`
-  SIGNATURE_PASS_LIST|不需要验证签名的url|List|`['DownloadContent']` or `['/api/v1/mcn/content/download']`
+  SIGNATURE_PASS_LIST|不需要验证签名的url|List|[]|`['DownloadContent']` or `['/api/v1/mcn/content/download']`
 
-#### SIGNATURE_RESPONSE
+##### 参数说明：SIGNATURE_RESPONSE
 
 ```python
 # request_sign.utils.default_response
@@ -58,7 +58,9 @@ def default_response():
 `request_sign.utils.default_response` 方法默认返回http状态码为200的空信息，你可以自行实现一个返回函数，更改 `SIGNATURE_RESPONSE`配置
 即可，但请一定注意，自行实现的函数一定要返回一个django的`HttpResponse`对象，否则django会异常。
 
-#### SIGNATURE_PASS_LIST
+##### 参数说明：SIGNATURE_PASS_LIST
+在此名单中的请求地址将不会效验签名，如`http://example.com/a/b/c?p=1` 填写：`/a/b/c`即可，主机与请求参数不用填写
+
 1. 在urls.py中配置name属性 `re_path('content/download', views.DownloadContent.as_view(), name='DownloadContent')`，配置中填写name值即可(推荐) 
 2. 直接写url(不推荐)
 
