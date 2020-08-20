@@ -65,7 +65,7 @@ def check_signature(request):
                 # 删除字典中空参数
                 for p in list(parameters.keys()):
                     p_value = try_safe_eval(parameters[p])
-                    if not p_value or len(p_value) == 0:
+                    if not isinstance(p_value, bool) and (not p_value or len(p_value)) == 0:
                         del parameters[p]
             else:
                 if len(str(parameter).split('=')) == 2:

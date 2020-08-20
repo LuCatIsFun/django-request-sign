@@ -5,6 +5,7 @@
 """
 
 import time
+import json
 import datetime
 
 from django.http import HttpResponse
@@ -19,7 +20,10 @@ def try_safe_eval(value):
     if all([value]):
         if value.startswith('[') and value.endswith(']') or \
                 value.startswith('{') and value.endswith('}'):
-            value = eval(value, {'datetime': datetime, 'time': time})
+            try:
+                value = json.loads(value)
+            except:
+                value = eval(value, {'datetime': datetime, 'time': time})
 
         elif value.lower() in ['true', 'false']:
             return {
