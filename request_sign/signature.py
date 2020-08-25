@@ -11,6 +11,14 @@ from urllib.parse import unquote
 from request_sign.utils import try_safe_eval
 from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, SIGNATURE_PASS_LIST
 
+KEY_MAP = {
+    'True': 'true',
+    'False': 'false',
+    'None': None
+}
+
+DELETE_KEY_MAP = ['[]', '{}', [], {}, None]
+
 
 def signature_request(parameters):
     # 列表生成式，生成key=value格式
@@ -43,7 +51,8 @@ def check_signature(request):
         raise ValueError('timestamp must be int or float')
 
     now_timestamp = datetime.now().timestamp()
-    if (now_timestamp-SIGNATURE_ALLOW_TIME_ERROR) > timestamp or timestamp > (now_timestamp+SIGNATURE_ALLOW_TIME_ERROR):
+    if (now_timestamp - SIGNATURE_ALLOW_TIME_ERROR) > timestamp or timestamp > (
+            now_timestamp + SIGNATURE_ALLOW_TIME_ERROR):
         return False
 
     parameters = {
@@ -60,13 +69,19 @@ def check_signature(request):
                 parameters = dict(parameters,
                                   **dict(zip(
                                       parameter.keys(),
-                                      map(lambda x: unquote(str(x)).replace('+', ' '), parameter.values()))
+                                      map(lambda x: KEY_MAP.get(str(x))
+                                      if str(x) in KEY_MAP else
+                                      unquote(str(x)).replace('+', ' '),
+                                          parameter.values()))
                                   ))
+
                 # 删除字典中空参数
                 for p in list(parameters.keys()):
                     p_value = try_safe_eval(parameters[p])
-                    if not isinstance(p_value, bool) and (not p_value or len(p_value)) == 0:
+                    if (not isinstance(p_value, bool) and (not p_value or len(p_value)) == 0) or \
+                            p_value in DELETE_KEY_MAP:
                         del parameters[p]
+
             else:
                 if len(str(parameter).split('=')) == 2:
                     key, value = str(parameter).split('=')

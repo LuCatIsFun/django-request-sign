@@ -46,11 +46,11 @@ def handle_pass_list(url_or_url_name_list):
     for u in url_or_url_name_list:
         try:
             u = reverse(u)
-            if u not in response:
-                response.append(u)
         except:
-            if u not in response:
-                response.append(u)
+            pass
+
+        if u not in response:
+            response.append(u)
 
     return response
 

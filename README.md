@@ -42,7 +42,7 @@ MIDDLEWARE = [
   SIGNATURE_ALLOW_TIME_ERROR|允许请求时间前后误差|Int|`600`|`600`
   SIGNATURE_RESPONSE|签名不通过返回方法|Str|`request_sign.utils.default_response`|`you_project.you_app.file.function`
   SIGNATURE_PASS_LIST|不需要验证签名的url|List|[]|`['DownloadContent']` or `['/api/v1/mcn/content/download']`
-
+  SIGNATURE_METHOD|效验请求类型|List|['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']|['get']
 ##### 参数说明：SIGNATURE_RESPONSE
 
 ```python
