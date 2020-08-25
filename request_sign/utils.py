@@ -25,10 +25,11 @@ def try_safe_eval(value):
             except:
                 value = eval(value, {'datetime': datetime, 'time': time})
 
-        elif value.lower() in ['true', 'false']:
+        elif value.lower() in ['true', 'false', 'none']:
             return {
                 'true': True,
                 'false': False,
+                'none': None
             }.get(value.lower())
 
     return value
