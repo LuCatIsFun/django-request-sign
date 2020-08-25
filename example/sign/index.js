@@ -34,7 +34,7 @@ function signature(config) {
     for (let key in config.params) {
       let item = config.params[key];
       if(!parameters.hasOwnProperty(key)){
-        if(item!==undefined&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
+        if(item!==undefined&&item!=="[]"&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
           if(typeof item==="object"){
             parameters[key] = JSON.stringify(item)
           }else{
@@ -48,7 +48,7 @@ function signature(config) {
     for (let key in config.data) {
       let item = config.data[key];
     　if(!parameters.hasOwnProperty(key)){
-        if(item!==undefined&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
+        if(item!==undefined&&item!=="[]"&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
           if(typeof item==="object"){
             parameters[key] = JSON.stringify(item)
           }else{
