@@ -3,15 +3,17 @@
 @contact: liyao2598330@126.com
 @time: 2020/8/14 4:39 下午
 """
-
+import re
 import hashlib
+
 from datetime import datetime
 from urllib.parse import unquote
 
 from django.core.cache import cache
 
 from request_sign.utils import try_safe_eval
-from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, SIGNATURE_PASS_LIST, NONCE_CACHE_KEY
+from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, NONCE_CACHE_KEY, SIGNATURE_PASS_URL, \
+    SIGNATURE_PASS_URL_NAME, SIGNATURE_PASS_URL_REGULAR
 
 KEY_MAP = {
     'True': 'true',
@@ -35,9 +37,18 @@ def signature_parameters(parameters):
     return m.hexdigest()
 
 
+def check_pass_url_regular(path):
+    for r in SIGNATURE_PASS_URL_REGULAR:
+        if re.search(r, path):
+            return True
+
+    return False
+
+
 def check_signature(request):
     # pass list
-    if request.path in SIGNATURE_PASS_LIST:
+    if request.path in SIGNATURE_PASS_URL or request.path in SIGNATURE_PASS_URL_NAME or \
+            check_pass_url_regular(request.path):
         return True
 
     timestamp = request.META.get("HTTP_TIMESTAMP")

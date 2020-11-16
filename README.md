@@ -35,17 +35,24 @@ MIDDLEWARE = [
 
 ### 配置参数
 
- 配置参数  | 说明   | 类型|默认值 |示例
+ 配置参数  | 说明 | 类型|默认值 |示例
 ------------ | ------------ | ------------ | ------------ |------------ 
   ENABLE_REQUEST_SIGNATURE |  是否开启 | Boolean |`False`| `True`/`False`
   SIGNATURE_SECRET | 签名秘钥  | Str|`None`|`e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI`
   SIGNATURE_ALLOW_TIME_ERROR|允许请求时间前后误差|Int|`600`|`600`
   SIGNATURE_RESPONSE|签名不通过返回方法|Str|`request_sign.utils.default_response`|`you_project.you_app.file.function`
-  SIGNATURE_PASS_LIST|不需要验证签名的url|List|[]|`['DownloadContent']` or `['/api/v1/mcn/content/download']`
+  SIGNATURE_PASS_URL|不需要验证签名的url|List|[]|`['/api/v1/mcn/content/download']`
+  SIGNATURE_PASS_URL_NAME|不需要验证签名的url名称|List|[]|`['DownloadContent']`
+  SIGNATURE_PASS_URL_REGULAR|不需要验证签名的url正则|List|[]|`['/app/*']`
+
   SIGNATURE_METHOD|效验请求类型|List|['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']|['get']
+  NONCE_CACHE_KEY|唯一性检查缓存key名称|Str|"django_request_sign_nonce_{nonce}"|"test_{nonce}"
+  
 ##### 参数说明：SIGNATURE_RESPONSE
 
 ```python
+from django.http import HttpResponse
+
 # request_sign.utils.default_response
 def default_response():
     """
@@ -64,7 +71,9 @@ def default_response():
 1. 在urls.py中配置name属性 `re_path('content/download', views.DownloadContent.as_view(), name='DownloadContent')`，配置中填写name值即可(推荐) 
 2. 直接写url(不推荐)
 
-
+##### 参数说明：NONCE_CACHE_KEY
+传入的key名称会以format函数解析，所以你必须在字符串中包括`{nonce}`
+请求唯一性检查需要设置django-redis，每次请求都会插入一个key来判断唯一性，如果没有安装django-redis则此配置无效
 
 ### 签名参数sign生成的方法
 
