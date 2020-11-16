@@ -8,8 +8,10 @@ import hashlib
 from datetime import datetime
 from urllib.parse import unquote
 
+from django.core.cache import cache
+
 from request_sign.utils import try_safe_eval
-from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, SIGNATURE_PASS_LIST
+from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, SIGNATURE_PASS_LIST, NONCE_CACHE_KEY
 
 KEY_MAP = {
     'True': 'true',
@@ -20,7 +22,7 @@ KEY_MAP = {
 DELETE_KEY_MAP = ['[]', '{}', [], {}, None]
 
 
-def signature_request(parameters):
+def signature_parameters(parameters):
     # 列表生成式，生成key=value格式
     parameters_list = ["".join(map(str, i)) for i in parameters.items() if i[1] and i[0] != "sign"]
     # 参数名ASCII码从小到大排序
@@ -42,6 +44,13 @@ def check_signature(request):
     nonce = request.META.get("HTTP_NONCE")
     sign = request.META.get("HTTP_SIGN")
 
+    # 判断cache是否正常
+    if hasattr(cache, 'get') and hasattr(cache, 'set'):
+        if cache.get(NONCE_CACHE_KEY.format(nonce=nonce)):
+            return False
+        else:
+            cache.set(NONCE_CACHE_KEY.format(nonce=nonce), True, SIGNATURE_ALLOW_TIME_ERROR)
+
     if not all([timestamp, nonce, sign]):
         return False
 
@@ -61,6 +70,12 @@ def check_signature(request):
     get_parameters = request.GET.urlencode()
     post_parameters = request.POST.urlencode()
     body_parameters = str(request.body, encoding='utf-8')
+    parameters = handle_parameter(parameters, get_parameters,
+                                  post_parameters, body_parameters)
+    return sign == signature_parameters(parameters)
+
+
+def handle_parameter(parameters, get_parameters, post_parameters, body_parameters):
     for parameter in ("&".join([get_parameters, post_parameters, body_parameters])).split('&'):
         if parameter:
             parameter = try_safe_eval(parameter)
@@ -88,4 +103,4 @@ def check_signature(request):
                     if key not in parameters:
                         # 解码并去除空格
                         parameters[key] = unquote(value).replace('+', ' ')
-    return sign == signature_request(parameters)
+    return parameters
