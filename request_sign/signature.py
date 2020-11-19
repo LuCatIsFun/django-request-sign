@@ -8,6 +8,7 @@ import base64
 import hashlib
 
 from datetime import datetime
+from urllib.parse import unquote
 
 from django.core.cache import cache
 
@@ -49,11 +50,11 @@ def check_pass_url_regular(path):
     return False
 
 
-def is_number(str):
+def is_number(value):
     try:
-        if str == 'NaN':
+        if value == 'NaN':
             return False
-        float(str)
+        float(value)
         return True
     except:
         return False
@@ -84,7 +85,7 @@ def check_signature(request):
     try:
         timestamp = float(timestamp)
     except:
-        raise ValueError('timestamp must be int or float')
+        return False
 
     now_timestamp = datetime.now().timestamp()
     if (now_timestamp - SIGNATURE_ALLOW_TIME_ERROR) > timestamp or timestamp > (
@@ -103,7 +104,16 @@ def check_signature(request):
 
 
 def handle_parameter(parameters, get_parameters, post_parameters, body_parameters):
-    for parameter in ("&".join([get_parameters, post_parameters, body_parameters])).split('&'):
+    parameter_list = []
+    url_parameter_list = []
+    for p in [get_parameters, post_parameters, body_parameters]:
+        d = try_safe_eval(p)
+        if isinstance(d, dict):
+            parameter_list.append(d)
+        elif isinstance(d, str):
+            url_parameter_list.append(d)
+    parameter_list.extend("&".join(url_parameter_list).split('&'))
+    for parameter in parameter_list:
         if parameter:
             parameter = try_safe_eval(parameter)
             if isinstance(parameter, dict):
@@ -122,6 +132,6 @@ def handle_parameter(parameters, get_parameters, post_parameters, body_parameter
                     key, value = str(parameter).split('=')
                     if value not in DELETE_KEY_MAP:
                         # 解码并去除空格
-                        value = re.sub(r"[^a-z\d]", "", str(value).lower())
+                        value = re.sub(r"[^a-z\d]", "", unquote(str(value), 'utf-8').lower())
                         parameters[key] = base64.b64encode(bytes(value, encoding="utf8"))
     return parameters

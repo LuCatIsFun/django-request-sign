@@ -14,7 +14,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="django-request-sign",
-    version="1.1.2",
+    version="1.1.4",
     author="liyao",
     author_email="liyao2598330@126.com",
     description="django request signature",

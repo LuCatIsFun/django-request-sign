@@ -16,23 +16,26 @@ except ImportError:
 
 
 def try_safe_eval(value):
-    value = str(value)
-    if all([value]):
-        if value.startswith('[') and value.endswith(']') or \
-                value.startswith('{') and value.endswith('}'):
-            try:
-                value = json.loads(value)
-            except:
-                value = eval(value, {'datetime': datetime, 'time': time})
+    if isinstance(value, (list, dict)):
+        return value
+    else:
+        value = str(value)
+        if all([value]):
+            if value.startswith('[') and value.endswith(']') or \
+                    value.startswith('{') and value.endswith('}'):
+                try:
+                    value = json.loads(value)
+                except:
+                    value = eval(value, {'datetime': datetime, 'time': time})
 
-        elif value.lower() in ['true', 'false', 'none']:
-            return {
-                'true': True,
-                'false': False,
-                'none': None
-            }.get(value.lower())
+            elif value.lower() in ['true', 'false', 'none']:
+                return {
+                    'true': True,
+                    'false': False,
+                    'none': None
+                }.get(value.lower())
 
-    return value
+        return value
 
 
 def handle_pass_list(url_or_url_name_list):
