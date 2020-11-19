@@ -35,10 +35,10 @@ MIDDLEWARE = [
 
 ### 配置参数
 
- 配置参数  | 说明 | 类型|默认值 |示例
+ 配置参数  | 说明 | 类型 | 默认值 | 示例
 ------------ | ------------ | ------------ | ------------ |------------ 
-  ENABLE_REQUEST_SIGNATURE |  是否开启 | Boolean |`False`| `True`/`False`
-  SIGNATURE_SECRET | 签名秘钥  | Str|`None`|`e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI`
+  ENABLE_REQUEST_SIGNATURE |是否开启| Boolean |`False`| `True`/`False`
+  SIGNATURE_SECRET |签名秘钥| Str|`None`|`e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI`
   SIGNATURE_ALLOW_TIME_ERROR|允许请求时间前后误差|Int|`600`|`600`
   SIGNATURE_RESPONSE|签名不通过返回方法|Str|`request_sign.utils.default_response`|`you_project.you_app.file.function`
   SIGNATURE_PASS_URL|不需要验证签名的url|List|[]|`['/api/v1/mcn/content/download']`
