@@ -65,7 +65,7 @@ def default_response():
 `request_sign.utils.default_response` 方法默认返回http状态码为200的空信息，你可以自行实现一个返回函数，更改 `SIGNATURE_RESPONSE`配置
 即可，但请一定注意，自行实现的函数一定要返回一个django的`HttpResponse`对象，否则django会异常。
 
-##### 参数说明：SIGNATURE_PASS_LIST
+##### 参数说明：SIGNATURE_PASS_URL
 在此名单中的请求地址将不会效验签名，如`http://example.com/a/b/c?p=1` 填写：`/a/b/c`即可，主机与请求参数不用填写
 
 1. 在urls.py中配置name属性 `re_path('content/download', views.DownloadContent.as_view(), name='DownloadContent')`，配置中填写name值即可(推荐) 

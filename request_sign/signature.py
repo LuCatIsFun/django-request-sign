@@ -4,16 +4,16 @@
 @time: 2020/8/14 4:39 下午
 """
 import re
+import base64
 import hashlib
 
 from datetime import datetime
-from urllib.parse import unquote
 
 from django.core.cache import cache
 
 from request_sign.utils import try_safe_eval
-from request_sign.settings import SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, NONCE_CACHE_KEY, SIGNATURE_PASS_URL, \
-    SIGNATURE_PASS_URL_NAME, SIGNATURE_PASS_URL_REGULAR
+from request_sign.settings import SIGNATURE_METHOD, SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, NONCE_CACHE_KEY, \
+    SIGNATURE_PASS_URL, SIGNATURE_PASS_URL_NAME, SIGNATURE_PASS_URL_REGULAR
 
 KEY_MAP = {
     'True': 'true',
@@ -21,10 +21,14 @@ KEY_MAP = {
     'None': None
 }
 
-DELETE_KEY_MAP = ['[]', '{}', [], {}, None]
+DELETE_KEY_MAP = ['[]', '{}', [], {}, None, '']
 
 
 def signature_parameters(parameters):
+    for p in parameters:
+        if type(parameters[p]) == bytes:
+            parameters[p] = str(parameters[p], encoding="utf-8")
+
     # 列表生成式，生成key=value格式
     parameters_list = ["".join(map(str, i)) for i in parameters.items() if i[1] and i[0] != "sign"]
     # 参数名ASCII码从小到大排序
@@ -45,9 +49,21 @@ def check_pass_url_regular(path):
     return False
 
 
+def is_number(str):
+    try:
+        if str == 'NaN':
+            return False
+        float(str)
+        return True
+    except:
+        return False
+
+
 def check_signature(request):
     # pass list
-    if request.path in SIGNATURE_PASS_URL or request.path in SIGNATURE_PASS_URL_NAME or \
+    if request.method.lower() not in SIGNATURE_METHOD or\
+            request.path in SIGNATURE_PASS_URL or \
+            request.path in SIGNATURE_PASS_URL_NAME or \
             check_pass_url_regular(request.path):
         return True
 
@@ -76,7 +92,7 @@ def check_signature(request):
         return False
 
     parameters = {
-        'nonce': nonce
+        'nonce': base64.b64encode(bytes(str(nonce).lower(), encoding="utf8"))
     }
     get_parameters = request.GET.urlencode()
     post_parameters = request.POST.urlencode()
@@ -92,26 +108,20 @@ def handle_parameter(parameters, get_parameters, post_parameters, body_parameter
             parameter = try_safe_eval(parameter)
             if isinstance(parameter, dict):
                 # 遍历字典，对value进行url解码
-                parameters = dict(parameters,
-                                  **dict(zip(
-                                      parameter.keys(),
-                                      map(lambda x: KEY_MAP.get(str(x))
-                                      if str(x) in KEY_MAP else
-                                      unquote(str(x)).replace('+', ' '),
-                                          parameter.values()))
-                                  ))
-
-                # 删除字典中空参数
-                for p in list(parameters.keys()):
-                    p_value = try_safe_eval(parameters[p])
-                    if (not isinstance(p_value, bool) and (not p_value or len(p_value)) == 0) or \
-                            p_value in DELETE_KEY_MAP:
-                        del parameters[p]
+                for p in parameter:
+                    v = parameter[p]
+                    if (v in DELETE_KEY_MAP or not v) and (not isinstance(v, (bool)) and not is_number(v)):
+                        continue
+                    v = re.sub(r"[^a-z\d]", "", str(parameter[p]).lower())
+                    if not v or v in DELETE_KEY_MAP:
+                        continue
+                    parameters[p] = base64.b64encode(bytes(v, encoding="utf8"))
 
             else:
                 if len(str(parameter).split('=')) == 2:
                     key, value = str(parameter).split('=')
-                    if key not in parameters:
+                    if value not in DELETE_KEY_MAP:
                         # 解码并去除空格
-                        parameters[key] = unquote(value).replace('+', ' ')
+                        value = re.sub(r"[^a-z\d]", "", str(value).lower())
+                        parameters[key] = base64.b64encode(bytes(value, encoding="utf8"))
     return parameters

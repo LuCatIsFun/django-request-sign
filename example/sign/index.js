@@ -1,15 +1,27 @@
-import md5 from 'md5.min.js'
+import md5 from 'js-md5' // yarn add js-md5
+import { Base64 } from 'js-base64' // yarn add js-base64
 
-function randomString(length) {
-    let str = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let result = '';
-    for (let i = length; i > 0; --i)
-        result += str[Math.floor(Math.random() * str.length)];
-    return result;
+function randomString (length) {
+    const str = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    let result = ''
+    for (let i = length; i > 0; --i) { result += str[Math.floor(Math.random() * str.length)] }
+    return result
 }
 
-function signature(config) {
-  const SECRET = 'e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI';
+function parseJson (jsonObj) {
+    for (const key in jsonObj) {
+        const element = jsonObj[key]
+        if (element.length > 0 && typeof (element) === 'object' || typeof (element) === 'object') {
+            parseJson(element)
+        } else {
+            jsonObj[key] = element.toString().toLowerCase()
+        }
+    }
+    return jsonObj
+}
+
+function signature (config) {
+  const SECRET = 'e6QGz7AhFzFAFsR9jYoCUnZGsqDrQI'
   // config 数据示例
   // {
   //     "url": "/user/login",
@@ -21,65 +33,45 @@ function signature(config) {
   //     "headers": {
   //     }
   // }
-  const timestamp = new Date()/1000;
-  const nonce = randomString(28);
-  config.headers.timestamp = timestamp;
-  config.headers.nonce = nonce;
+  const timestamp = new Date() / 1000
+  const nonce = randomString(28)
+  config.headers.timestamp = timestamp
+  config.headers.nonce = nonce
 
-  let parameters = {
+  const parameters = {
     nonce: nonce
   };
-
-  if(config.hasOwnProperty('params')){
-    for (let key in config.params) {
-      let item = config.params[key];
-      if(!parameters.hasOwnProperty(key)){
-        if(item!==undefined&&item!=="[]"&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
-          if(typeof item==="object"){
-            parameters[key] = JSON.stringify(item)
-          }else{
-            parameters[key] = String(item)
+  ['params', 'data'].forEach(function (d) {
+    if (config.hasOwnProperty(d)) {
+      for (const key in config[d]) {
+        const item = config[d][key]
+        if (item !== undefined && item !== '[]' && JSON.stringify(item) !== '[]' && item !== '' && item !== null || !!+item) {
+          if (typeof item === 'object') {
+            parameters[key] = JSON.stringify(parseJson(item))
+          } else {
+            parameters[key] = item.toString().toLowerCase()
           }
         }
       }
     }
-  }
-  if(config.hasOwnProperty('data')){
-    for (let key in config.data) {
-      let item = config.data[key];
-    　if(!parameters.hasOwnProperty(key)){
-        if(item!==undefined&&item!=="[]"&&JSON.stringify(item)!=='[]'&&item!==''&&item!==null||!!+item){
-          if(typeof item==="object"){
-            parameters[key] = JSON.stringify(item)
-          }else{
-            parameters[key] = String(item)
-          }
-        }
+  })
+  const parametersList = []
+  for (const key in parameters) {
+    const item = parameters[key].toLowerCase().replace(/[^a-z\d]/ig, '')
+    if (item !== undefined && item !== '[]' && JSON.stringify(item) !== '[]' && item !== '' && item !== null || !!+item) {
+      const result = key + Base64.encode(item)
+      if (parametersList.indexOf(result) === -1) {
+        parametersList.push(result)
       }
     }
   }
-  let parameters_list = [];
-  for (let key in parameters) {
-    let item = key+parameters[key];
-    if(parameters_list.indexOf(item)===-1){
-      parameters_list.push(item)
-    }
-  }
-  let sort_parameters = parameters_list.sort();
-  console.log("parameters_list:"+JSON.stringify(parameters_list));
-  console.log("sort_parameters:"+JSON.stringify(sort_parameters));
-
-  let sort_parameters_secret = (sort_parameters.join("")+SECRET).toLowerCase();
-
-  console.log("sort_parameters_secret:"+sort_parameters_secret)
-  console.log("sign:"+md5(sort_parameters_secret))
-  config.headers.sign = md5(sort_parameters_secret);
-  return config;
+  const sortParameters = parametersList.sort()
+  const sortParametersSecret = (sortParameters.join('') + SECRET).toLowerCase()
+  config.headers.sign = md5(sortParametersSecret)
+  return config
 }
-
-
 export default {
-  sign(config){
+  sign (config) {
     return signature(config)
   }
 }
