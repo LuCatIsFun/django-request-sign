@@ -44,7 +44,6 @@ MIDDLEWARE = [
   SIGNATURE_PASS_URL|不需要验证签名的url|List|[]|`['/api/v1/mcn/content/download']`
   SIGNATURE_PASS_URL_NAME|不需要验证签名的url名称|List|[]|`['DownloadContent']`
   SIGNATURE_PASS_URL_REGULAR|不需要验证签名的url正则|List|[]|`['/app/*']`
-
   SIGNATURE_METHOD|效验请求类型|List|['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']|['get']
   NONCE_CACHE_KEY|唯一性检查缓存key名称|Str|"django_request_sign_nonce_{nonce}"|"test_{nonce}"
   
