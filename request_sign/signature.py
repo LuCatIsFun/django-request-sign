@@ -3,42 +3,41 @@
 @contact: liyao2598330@126.com
 @time: 2020/8/14 4:39 下午
 """
+import json.decoder
 import re
-import base64
 import hashlib
+
+import logging
 
 from datetime import datetime
 from urllib.parse import unquote
 
 from django.core.cache import cache
 
-from request_sign.utils import try_safe_eval
-from request_sign.settings import SIGNATURE_METHOD, SIGNATURE_SECRET, SIGNATURE_ALLOW_TIME_ERROR, NONCE_CACHE_KEY, \
-    SIGNATURE_PASS_URL, SIGNATURE_PASS_URL_NAME, SIGNATURE_PASS_URL_REGULAR
+from request_sign.settings import (
+    SIGNATURE_METHOD,
+    SIGNATURE_SECRET,
+    SIGNATURE_ALLOW_TIME_ERROR,
+    NONCE_CACHE_KEY,
+    SIGNATURE_PASS_URL,
+    SIGNATURE_DEBUG,
+    SIGNATURE_PASS_URL_REGULAR
+)
 
-KEY_MAP = {
-    'True': 'true',
-    'False': 'false',
-    'None': None
-}
+DELETE_KEY_MAP = [[], {}, None, '']
 
-DELETE_KEY_MAP = ['[]', '{}', [], {}, None, '']
+logger = logging.getLogger("default")
 
 
-def signature_parameters(parameters):
-    for p in parameters:
-        if type(parameters[p]) == bytes:
-            parameters[p] = str(parameters[p], encoding="utf-8")
-
-    # 列表生成式，生成key=value格式
-    parameters_list = ["".join(map(str, i)) for i in parameters.items() if i[1] and i[0] != "sign"]
+def signature_parameters(nonce: str, parameters: list):
+    parameters_str = ''.join(re.findall(r"[A-Za-z0-9]", "".join(parameters) + SIGNATURE_SECRET)) + \
+                     nonce
     # 参数名ASCII码从小到大排序
-    sort_parameters = "".join(sorted(parameters_list))
-    # 在strA后面拼接上SIGNATURE_SECRET得到signature_str字符串
-    signature_str = sort_parameters + SIGNATURE_SECRET
+    parameters_sort = "".join(sorted(list(parameters_str))).split("_")
+    parameters_sort[0], parameters_sort[1] = parameters_sort[1], parameters_sort[0]
     # MD5加密
     m = hashlib.md5()
-    m.update(signature_str.lower().encode('UTF-8'))
+    m.update("".join(parameters_sort).encode('UTF-8'))
     return m.hexdigest()
 
 
@@ -50,88 +49,93 @@ def check_pass_url_regular(path):
     return False
 
 
-def is_number(value):
-    try:
-        if value == 'NaN':
-            return False
-        float(value)
-        return True
-    except:
-        return False
+class Log:
+
+    def __init__(self, debug=False):
+        self.debug = debug
+        self.prefix = "#MIDDLEWARE# request_sign -> "
+
+    def info(self, message):
+        if self.debug:
+            logger.info(self.prefix + message)
+
+    def error(self, message):
+        if self.debug:
+            logger.error(self.prefix + message)
 
 
 def check_signature(request):
-    # pass list
-    if request.method.lower() not in SIGNATURE_METHOD or\
+    """
+    检查签名是否符合
+    """
+    if request.method.lower() not in SIGNATURE_METHOD or \
             request.path in SIGNATURE_PASS_URL or \
-            request.path in SIGNATURE_PASS_URL_NAME or \
             check_pass_url_regular(request.path):
         return True
 
-    timestamp = request.META.get("HTTP_TIMESTAMP")
-    nonce = request.META.get("HTTP_NONCE")
-    sign = request.META.get("HTTP_SIGN")
+    timestamp = request.META.get("HTTP_T")
+    nonce = request.META.get("HTTP_N")
+    sign = request.META.get("HTTP_S")
+
+    log = Log(debug=SIGNATURE_DEBUG)
+
+    log.info(("timestamp, nonce, sign=[%s, %s, %s]" % (timestamp, nonce, sign)))
+
+    if not all([timestamp, nonce, sign]):
+        log.error("required parameter missing, no pass")
+        return False
 
     # 判断cache是否正常
     if hasattr(cache, 'get') and hasattr(cache, 'set'):
         if cache.get(NONCE_CACHE_KEY.format(nonce=nonce)):
+            log.error("nonce:%s repeat, no pass" % nonce)
             return False
         else:
-            cache.set(NONCE_CACHE_KEY.format(nonce=nonce), True, SIGNATURE_ALLOW_TIME_ERROR)
-
-    if not all([timestamp, nonce, sign]):
-        return False
-
+            cache.set(NONCE_CACHE_KEY.format(nonce=nonce), True, 300)
     try:
-        timestamp = float(timestamp)
+        timestamp = int(timestamp)
     except:
+        log.error("timestamp format error, no pass")
         return False
 
     now_timestamp = datetime.now().timestamp()
     if (now_timestamp - SIGNATURE_ALLOW_TIME_ERROR) > timestamp or timestamp > (
             now_timestamp + SIGNATURE_ALLOW_TIME_ERROR):
+        log.error("request timestamp expired, not pass")
         return False
 
-    parameters = {
-        'nonce': base64.b64encode(bytes(str(nonce).lower(), encoding="utf8"))
-    }
-    get_parameters = request.GET.urlencode()
-    post_parameters = request.POST.urlencode()
-    body_parameters = str(request.body, encoding='utf-8')
-    parameters = handle_parameter(parameters, get_parameters,
-                                  post_parameters, body_parameters)
-    return sign == signature_parameters(parameters)
+    get_parameters = request.GET.dict()
+    post_parameters = request.POST.dict()
+    try:
+        body_parameters = json.loads(request.body.decode("utf-8")) if request.body else None
+    except json.decoder.JSONDecodeError:
+        body_parameters = None
+    log.info(
+        "get_parameters, post_parameters, body_parameters=[%s, %s, %s]" % (
+            get_parameters, post_parameters, body_parameters
+        )
+    )
+    parameters = handle_parameter(get_parameters,
+                                  post_parameters, body_parameters, str(timestamp))
+    log.info("after parameters process: %s" % parameters)
+    result = signature_parameters(nonce, parameters)
+    log.info("get sign:%s, origin:%s -> %s" % (
+        result, sign, result == sign
+    ))
+    return sign == result
 
 
-def handle_parameter(parameters, get_parameters, post_parameters, body_parameters):
+def handle_parameter(get_parameters, post_parameters, body_parameters, timestamp) -> list:
     parameter_list = []
-    url_parameter_list = []
-    for p in [get_parameters, post_parameters, body_parameters]:
-        d = try_safe_eval(p)
-        if isinstance(d, dict):
-            parameter_list.append(d)
-        elif isinstance(d, str):
-            url_parameter_list.append(d)
-    parameter_list.extend("&".join(url_parameter_list).split('&'))
-    for parameter in parameter_list:
-        if parameter:
-            parameter = try_safe_eval(parameter)
-            if isinstance(parameter, dict):
-                # 遍历字典，对value进行url解码
-                for p in parameter:
-                    v = parameter[p]
-                    if (v in DELETE_KEY_MAP or not v) and (not isinstance(v, (bool)) and not is_number(v)):
-                        continue
-                    v = re.sub(r"[^a-z\d]", "", str(parameter[p]).lower())
-                    if not v or v in DELETE_KEY_MAP:
-                        continue
-                    parameters[p] = base64.b64encode(bytes(v, encoding="utf8"))
-
-            else:
-                if len(str(parameter).split('=')) == 2:
-                    key, value = str(parameter).split('=')
-                    if value not in DELETE_KEY_MAP:
-                        # 解码并去除空格
-                        value = re.sub(r"[^a-z\d]", "", unquote(str(value), 'utf-8').lower())
-                        parameters[key] = base64.b64encode(bytes(value, encoding="utf8"))
-    return parameters
+    for p in [get_parameters, post_parameters, body_parameters, timestamp]:
+        if isinstance(p, dict):
+            t = {}
+            for key, value in p.items():
+                if value not in DELETE_KEY_MAP:
+                    t[key] = value
+            parameter_list.append(json.dumps(t))
+        elif isinstance(p, str):
+            parameter_list.append(unquote(p))
+        elif isinstance(p, bytes):
+            parameter_list.append(str(p, encoding="utf-8"))
+    return parameter_list
