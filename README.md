@@ -74,15 +74,6 @@ def default_response():
 传入的key名称会以format函数解析，所以你必须在字符串中包括`{nonce}`
 请求唯一性检查需要设置django-redis，每次请求都会插入一个key来判断唯一性，如果没有安装django-redis则此配置无效
 
-### 签名参数sign生成的方法
-
-1. 拼接字符串，首先去除sign参数本身，然后去除值是空的参数p3，剩下p2=v2&p1=v1&method=cancel&pn=vn，
-然后按参数名字符升序排序，method=cancel&p1=v1&p2=v2&pn=vn.
-2. 然后做参数名和值的拼接，最后得到methodcancelp1v1p2v2pnvn
-3. 在上面拼接得到的字符串后加上验证密钥key，我们假设是abc，得到新的字符串methodcancelp1v1p2v2pnvnabc
-4. 然后将这个字符串换为小写进行md5计算，假设得到的是abcdef，这个值即为sign签名值。
-
-
 
 
 ### 参考
